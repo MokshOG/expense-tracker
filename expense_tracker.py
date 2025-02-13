@@ -2,13 +2,21 @@ import streamlit as st
 import pickle
 import os
 import sys
+import pandas as pd
 from datetime import datetime
 
 EXPENSE_FILE = "expense.pkl"
 
+# Initialize session state if not present
+if 'expenses' not in st.session_state:
+    st.session_state.expenses = []
+
 def add_expense(amount, category):
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    current_date = datetime.now().strftime("%d/%m/%Y")
     record = [current_date, amount, category]
+    
+    # Append to the session state to prevent duplicate entries
+    st.session_state.expenses.append(record)
     
     # Append to the file
     with open(EXPENSE_FILE, "ab") as file:
@@ -24,6 +32,13 @@ def read_expenses():
                 except EOFError:
                     break
     return expenses
+
+def export_to_csv(expenses):
+    df = pd.DataFrame(expenses, columns=["Date", "Amount", "Category"])
+    df.index += 1  # Start index from 1
+    csv_file = "expenses.csv"
+    df.to_csv(csv_file, index_label="S.No")
+    return csv_file
 
 # Check if Streamlit is installed
 if "streamlit" not in sys.modules:
@@ -50,10 +65,24 @@ if choice == "Add Expense":
 elif choice == "View Summary":
     st.subheader("Expense Summary")
     expenses = read_expenses()
+    
+    # Deduplicate expenses using session state
+    if 'expenses' in st.session_state:
+        expenses.extend(st.session_state.expenses)
+    
     if expenses:
+        # Format data with S.No, Date, Category, Amount
+        formatted_expenses = [{"S.No": i+1, "Date": exp[0], "Category": exp[2], "Amount": exp[1]} for i, exp in enumerate(expenses)]
+        
+        st.table(formatted_expenses)
+        
         total_balance = sum(exp[1] for exp in expenses)
         st.write(f"### Net Balance: ₹{total_balance}")
-        st.table(expenses)
+        
+        # Export to CSV feature
+        csv_file = export_to_csv(expenses)
+        with open(csv_file, "rb") as file:
+            st.download_button(label="Download CSV", data=file, file_name=csv_file, mime="text/csv")
     else:
         st.write("No transactions recorded yet!")
 
