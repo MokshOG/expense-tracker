@@ -37,21 +37,24 @@ menu = ["Add Expense", "View Summary"]
 choice = st.sidebar.selectbox("Menu", menu)
 
 if choice == "Add Expense":
-    st.subheader("Add a New Expense")
-    amount = st.number_input("Enter Amount:", min_value=1)
+    st.subheader("Add a New Expense or Income")
+    amount = st.number_input("Enter Amount (Use negative for expense, positive for income):", min_value=-100000, max_value=100000, value=0)
     category = st.text_input("Enter Category:")
-    if st.button("Add Expense"):
-        add_expense(amount, category)
-        st.success("Expense Added Successfully!")
+    if st.button("Add Transaction"):
+        if amount == 0:
+            st.warning("Amount cannot be zero!")
+        else:
+            add_expense(amount, category)
+            st.success("Transaction Added Successfully!")
 
 elif choice == "View Summary":
     st.subheader("Expense Summary")
     expenses = read_expenses()
     if expenses:
-        total_amount = sum(exp[1] for exp in expenses)
-        st.write(f"### Total Expenses: ₹{total_amount}")
+        total_balance = sum(exp[1] for exp in expenses)
+        st.write(f"### Net Balance: ₹{total_balance}")
         st.table(expenses)
     else:
-        st.write("No expenses recorded yet!")
+        st.write("No transactions recorded yet!")
 
-st.sidebar.write("Developed with ❤️ by You")
+st.sidebar.write("Developed with ❤️ by Moksh")
