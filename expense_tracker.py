@@ -15,8 +15,9 @@ def add_expense(amount, category):
     current_date = datetime.now().strftime("%d/%m/%Y")
     record = [current_date, amount, category]
     
-    # Append to the session state to prevent duplicate entries
-    st.session_state.expenses.append(record)
+    # Append to session state to prevent duplicate entries
+    if record not in st.session_state.expenses:
+        st.session_state.expenses.append(record)
     
     # Append to the file
     with open(EXPENSE_FILE, "ab") as file:
@@ -28,7 +29,9 @@ def read_expenses():
         with open(EXPENSE_FILE, "rb") as file:
             while True:
                 try:
-                    expenses.append(pickle.load(file))
+                    record = pickle.load(file)
+                    if record not in expenses:  # Prevent duplicate loading
+                        expenses.append(record)
                 except EOFError:
                     break
     return expenses
@@ -39,6 +42,15 @@ def export_to_csv(expenses):
     csv_file = "expenses.csv"
     df.to_csv(csv_file, index_label="S.No")
     return csv_file
+
+def filter_expenses_by_period(expenses, period):
+    df = pd.DataFrame(expenses, columns=["Date", "Amount", "Category"])
+    df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y")
+    if period == "Monthly":
+        df = df[df["Date"].dt.month == datetime.now().month]
+    elif period == "Yearly":
+        df = df[df["Date"].dt.year == datetime.now().year]
+    return df.values.tolist()
 
 # Check if Streamlit is installed
 if "streamlit" not in sys.modules:
@@ -68,7 +80,13 @@ elif choice == "View Summary":
     
     # Deduplicate expenses using session state
     if 'expenses' in st.session_state:
-        expenses.extend(st.session_state.expenses)
+        for exp in st.session_state.expenses:
+            if exp not in expenses:
+                expenses.append(exp)
+    
+    period_filter = st.radio("Filter by:", ["All", "Monthly", "Yearly"], index=0)
+    if period_filter != "All":
+        expenses = filter_expenses_by_period(expenses, period_filter)
     
     if expenses:
         # Format data with S.No, Date, Category, Amount
