@@ -11,8 +11,12 @@ EXPENSE_FILE = "expense.pkl"
 if 'expenses' not in st.session_state:
     st.session_state.expenses = []
 
-def add_expense(amount, category):
+def add_expense(amount, category, transaction_type):
     current_date = datetime.now().strftime("%d/%m/%Y")
+    if transaction_type == "Debit":
+        amount = -abs(amount)  # Ensure expense is negative
+    else:
+        amount = abs(amount)  # Ensure income is positive
     record = [current_date, amount, category]
     
     # Append to session state to prevent duplicate entries
@@ -52,6 +56,14 @@ def filter_expenses_by_period(expenses, period):
         df = df[df["Date"].dt.year == datetime.now().year]
     return df.values.tolist()
 
+def delete_expense(index):
+    if 0 <= index < len(st.session_state.expenses):
+        del st.session_state.expenses[index]
+        with open(EXPENSE_FILE, "wb") as file:
+            for record in st.session_state.expenses:
+                pickle.dump(record, file)
+        st.success("Expense deleted successfully!")
+
 # Check if Streamlit is installed
 if "streamlit" not in sys.modules:
     st.error("Streamlit module is not found. Please ensure it is installed using 'pip install streamlit'.")
@@ -65,13 +77,14 @@ choice = st.sidebar.selectbox("Menu", menu)
 
 if choice == "Add Expense":
     st.subheader("Add a New Expense or Income")
-    amount = st.number_input("Enter Amount (Use negative for expense, positive for income):", min_value=-100000, max_value=100000, value=0)
+    transaction_type = st.radio("Select Transaction Type:", ["Credit", "Debit"])
+    amount = st.number_input("Enter Amount:", min_value=1, max_value=100000, value=0)
     category = st.text_input("Enter Category:")
     if st.button("Add Transaction"):
         if amount == 0:
             st.warning("Amount cannot be zero!")
         else:
-            add_expense(amount, category)
+            add_expense(amount, category, transaction_type)
             st.success("Transaction Added Successfully!")
 
 elif choice == "View Summary":
@@ -101,6 +114,12 @@ elif choice == "View Summary":
         csv_file = export_to_csv(expenses)
         with open(csv_file, "rb") as file:
             st.download_button(label="Download CSV", data=file, file_name=csv_file, mime="text/csv")
+        
+        # Delete Expense Feature
+        st.subheader("Delete an Entry")
+        delete_index = st.number_input("Enter the S.No of the entry to delete:", min_value=1, max_value=len(expenses), step=1)
+        if st.button("Delete Entry"):
+            delete_expense(delete_index - 1)
     else:
         st.write("No transactions recorded yet!")
 
