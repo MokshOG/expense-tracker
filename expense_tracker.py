@@ -17,7 +17,7 @@ def add_expense(amount, category, transaction_type):
         amount = -abs(amount)  # Ensure expense is negative
     else:
         amount = abs(amount)  # Ensure income is positive
-    record = [current_date, amount, category]
+    record = [current_date, category, amount]
     
     # Append to session state to prevent duplicate entries
     if record not in st.session_state.expenses:
@@ -41,14 +41,14 @@ def read_expenses():
     return expenses
 
 def export_to_csv(expenses):
-    df = pd.DataFrame(expenses, columns=["Date", "Amount", "Category"])
+    df = pd.DataFrame(expenses, columns=["Date", "Category", "Amount"])
     df.index += 1  # Start index from 1
     csv_file = "expenses.csv"
     df.to_csv(csv_file, index_label="S.No")
     return csv_file
 
 def filter_expenses_by_period(expenses, period):
-    df = pd.DataFrame(expenses, columns=["Date", "Amount", "Category"])
+    df = pd.DataFrame(expenses, columns=["Date", "Category", "Amount"])
     df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y")
     if period == "Monthly":
         df = df[df["Date"].dt.month == datetime.now().month]
@@ -78,14 +78,11 @@ choice = st.sidebar.selectbox("Menu", menu)
 if choice == "Add Expense":
     st.subheader("Add a New Expense or Income")
     transaction_type = st.radio("Select Transaction Type:", ["Credit", "Debit"])
-    amount = st.number_input("Enter Amount:", min_value=1, max_value=100000, value=0)
-    category = st.text_input("Enter Category:")
+    amount = st.number_input("Enter Amount:", min_value=1, max_value=100000, value=1)
+    category = st.text_input("Enter Category:", max_chars=50)
     if st.button("Add Transaction"):
-        if amount == 0:
-            st.warning("Amount cannot be zero!")
-        else:
-            add_expense(amount, category, transaction_type)
-            st.success("Transaction Added Successfully!")
+        add_expense(amount, category, transaction_type)
+        st.success("Transaction Added Successfully!")
 
 elif choice == "View Summary":
     st.subheader("Expense Summary")
@@ -103,11 +100,11 @@ elif choice == "View Summary":
     
     if expenses:
         # Format data with S.No, Date, Category, Amount
-        formatted_expenses = [{"S.No": i+1, "Date": exp[0], "Category": exp[2], "Amount": exp[1]} for i, exp in enumerate(expenses)]
+        formatted_expenses = [{"S.No": i+1, "Date": exp[0], "Category": exp[1], "Amount": exp[2]} for i, exp in enumerate(expenses)]
         
         st.table(formatted_expenses)
         
-        total_balance = sum(exp[1] for exp in expenses)
+        total_balance = sum(exp[2] for exp in expenses)
         st.write(f"### Net Balance: ₹{total_balance}")
         
         # Export to CSV feature
