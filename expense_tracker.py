@@ -21,6 +21,9 @@ def add_expense(user, amount, category, transaction_type):
         amount = abs(amount)  # Ensure income is positive
     record = [current_date, amount, category]
     
+    if 'expenses' not in st.session_state:
+        st.session_state.expenses = {}
+    
     if user not in st.session_state.expenses:
         st.session_state.expenses[user] = []
     
@@ -31,6 +34,9 @@ def add_expense(user, amount, category, transaction_type):
         pickle.dump(st.session_state.expenses, file)
 
 def read_expenses():
+    if "expenses" not in st.session_state:
+        st.session_state.expenses = {}
+    
     if os.path.exists(EXPENSE_FILE):
         with open(EXPENSE_FILE, "rb") as file:
             try:
@@ -67,6 +73,8 @@ def delete_expense(user, index):
 
 st.title("💰 Family Expense Tracker")
 
+read_expenses()
+
 if not st.session_state.current_user:
     users = list(st.session_state.expenses.keys())
     selected_user = st.selectbox("Select User:", ["New User"] + users)
@@ -74,12 +82,13 @@ if not st.session_state.current_user:
         new_user = st.text_input("Enter Your Name:").strip()
         if new_user:
             st.session_state.current_user = new_user
+            if new_user not in st.session_state.expenses:
+                st.session_state.expenses[new_user] = []
     else:
         st.session_state.current_user = selected_user
 
 if st.session_state.current_user:
     user = st.session_state.current_user
-    read_expenses()
     
     menu = ["Add Expense", "View Summary"]
     choice = st.sidebar.selectbox("Menu", menu)
